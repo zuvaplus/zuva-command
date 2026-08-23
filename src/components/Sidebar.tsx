@@ -41,16 +41,36 @@ function formatDateTime(date: Date) {
   })
 }
 
+interface SidebarStatus {
+  overdueFollowUps: number
+  liveSportsEvent: boolean
+  gmailConnected: boolean
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [now, setNow] = useState<Date | null>(null)
+  const [status, setStatus] = useState<SidebarStatus>({ overdueFollowUps: 0, liveSportsEvent: false, gmailConnected: false })
 
   useEffect(() => {
     setNow(new Date())
     const interval = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
+
+  // Refetches on every route change too — cheap enough for a sidebar
+  // that's mounted for the whole session, and keeps the follow-up badge
+  // and live-event dot from going stale after e.g. sending an email or
+  // ending a stream on the page the founder just navigated away from.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/sidebar-status')
+      .then((res) => res.json())
+      .then((data) => { if (!cancelled) setStatus(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [pathname])
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -98,13 +118,30 @@ export default function Sidebar() {
               ) : (
                 <item.icon size={18} />
               )}
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === '/sports' && status.liveSportsEvent && (
+                <span className="h-2 w-2 animate-pulse rounded-full" style={{ backgroundColor: active ? '#000000' : '#22C55E' }} title="Live event in progress" />
+              )}
+              {item.href === '/crm' && status.overdueFollowUps > 0 && (
+                <span
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+                  style={active ? { backgroundColor: '#000000', color: '#F37B0D' } : { backgroundColor: '#EF4444', color: '#FFFFFF' }}
+                >
+                  {status.overdueFollowUps}
+                </span>
+              )}
             </Link>
           )
         })}
       </nav>
 
       <div className="space-y-3 px-3 pb-5 pt-3" style={{ borderTop: '1px solid #2A2A2A' }}>
+        <div className="flex items-center gap-2 px-3">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.gmailConnected ? '#22C55E' : '#555555' }} />
+          <span className="text-[11px]" style={{ color: '#888888' }}>
+            {status.gmailConnected ? 'Gmail connected' : 'Gmail not connected'}
+          </span>
+        </div>
         <p className="px-3 text-xs tabular-nums" style={{ color: '#888888' }}>
           {now ? formatDateTime(now) : ''}
         </p>

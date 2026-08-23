@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '@/lib/supabase'
-import { ZUVA_SYSTEM_PROMPT } from '@/lib/systemPrompt'
+import { ZUVA_SYSTEM_PROMPT } from '@/lib/zuva-system-prompt'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST() {
   try {
     const today = new Date().toISOString().slice(0, 10)
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
 
-    const [tasksRes, followUpsRes, fundingRes, sportsRes] = await Promise.all([
+    const [tasksRes, followUpsRes, fundingRes, sportsRes, liveEventsRes, activeCampaignsRes, revenueRes] = await Promise.all([
       supabaseAdmin
         .from('command_tasks')
         .select('*')
@@ -28,12 +31,24 @@ export async function POST() {
         .gte('event_date', new Date().toISOString())
         .order('event_date', { ascending: true })
         .limit(1),
+      supabaseAdmin.from('command_sports_events').select('*').eq('status', 'Live'),
+      supabaseAdmin.from('command_campaigns').select('*', { count: 'exact', head: true }).eq('status', 'Active'),
+      supabaseAdmin
+        .from('command_campaigns')
+        .select('revenue_usd')
+        .in('status', ['Active', 'Completed'])
+        .gte('created_at', startOfMonth.toISOString()),
     ])
 
     if (tasksRes.error) throw tasksRes.error
     if (followUpsRes.error) throw followUpsRes.error
     if (fundingRes.error) throw fundingRes.error
     if (sportsRes.error) throw sportsRes.error
+    if (liveEventsRes.error) throw liveEventsRes.error
+    if (activeCampaignsRes.error) throw activeCampaignsRes.error
+    if (revenueRes.error) throw revenueRes.error
+
+    const revenueThisMonth = (revenueRes.data ?? []).reduce((sum, r) => sum + Number(r.revenue_usd || 0), 0)
 
     const briefingData = {
       today,
@@ -41,6 +56,9 @@ export async function POST() {
       follow_ups_due: followUpsRes.data,
       funding_pipeline: fundingRes.data,
       next_sports_event: sportsRes.data?.[0] ?? null,
+      live_sports_events: liveEventsRes.data,
+      active_campaigns_count: activeCampaignsRes.count ?? 0,
+      revenue_this_month_usd: revenueThisMonth,
     }
 
     const response = await client.messages.create({

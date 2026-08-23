@@ -47,3 +47,73 @@ export interface CommandProspect {
   created_at: string
   updated_at: string
 }
+
+export interface CommandEmail {
+  id: string
+  prospect_id: string | null
+  email_type: string
+  subject: string | null
+  body: string
+  sent_at: string | null
+  opened: boolean
+  created_at: string
+}
+
+export interface CommandProspectActivity {
+  id: string
+  prospect_id: string
+  activity_type: string
+  description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface CommandGmailToken {
+  id: string
+  access_token: string
+  refresh_token: string
+  expiry_date: number
+  email: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CommandCampaign {
+  id: string
+  advertiser_name: string
+  campaign_name: string
+  package_tier: string | null
+  status: string
+  start_date: string | null
+  end_date: string | null
+  budget_usd: number | null
+  impressions_delivered: number
+  clicks: number
+  revenue_usd: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CommandSportsEvent {
+  id: string
+  event_name: string
+  school_or_team: string | null
+  sport: string | null
+  venue: string | null
+  event_date: string | null
+  cloudflare_stream_key: string | null
+  cloudflare_stream_uid: string | null
+  status: string
+  viewer_peak: number
+  notes: string | null
+  created_at: string
+}
+
+export interface HubSchoolStatus {
+  camera: string
+  avClub: string
+  contact: string
+}
+
+export type HubSchoolsConfig = Record<string, HubSchoolStatus>

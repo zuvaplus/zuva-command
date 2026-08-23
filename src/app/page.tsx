@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { colorFor, FUNDING_STATUS_COLORS } from '@/lib/badgeColors'
 import ColorBadge from '@/components/ColorBadge'
@@ -14,8 +15,11 @@ const PRIORITY_RANK: Record<string, number> = { Critical: 1, High: 2, Medium: 3,
 
 async function getStats() {
   const today = new Date().toISOString().slice(0, 10)
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
 
-  const [tasksRemaining, criticalTasks, followUpsDue, totalProspects, fundingApps] = await Promise.all([
+  const [tasksRemaining, criticalTasks, followUpsDue, totalProspects, fundingApps, revenueRows, liveEvents] = await Promise.all([
     supabaseAdmin.from('command_tasks').select('*', { count: 'exact', head: true }).neq('status', 'Completed'),
     supabaseAdmin
       .from('command_tasks')
@@ -28,7 +32,15 @@ async function getStats() {
       .from('command_funding')
       .select('*', { count: 'exact', head: true })
       .in('status', ['Submitted', 'Under Review']),
+    supabaseAdmin
+      .from('command_campaigns')
+      .select('revenue_usd')
+      .in('status', ['Active', 'Completed'])
+      .gte('created_at', startOfMonth.toISOString()),
+    supabaseAdmin.from('command_sports_events').select('*', { count: 'exact', head: true }).eq('status', 'Live'),
   ])
+
+  const revenueThisMonth = (revenueRows.data ?? []).reduce((sum, r) => sum + Number(r.revenue_usd || 0), 0)
 
   return {
     tasksRemaining: tasksRemaining.count ?? 0,
@@ -36,6 +48,8 @@ async function getStats() {
     followUpsDue: followUpsDue.count ?? 0,
     totalProspects: totalProspects.count ?? 0,
     fundingApps: fundingApps.count ?? 0,
+    revenueThisMonth,
+    liveEvents: liveEvents.count ?? 0,
   }
 }
 
@@ -62,9 +76,9 @@ async function getFunding(): Promise<CommandFunding[]> {
   return data
 }
 
-function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
-  return (
-    <div className="rounded-xl p-5" style={{ backgroundColor: '#1A1A1A', border: '1px solid #2A2A2A' }}>
+function StatCard({ label, value, accent, href }: { label: string; value: string | number; accent?: boolean; href?: string }) {
+  const content = (
+    <div className="rounded-xl p-5 transition-colors" style={{ backgroundColor: '#1A1A1A', border: '1px solid #2A2A2A' }}>
       <p className="text-3xl font-extrabold" style={{ color: accent ? '#F37B0D' : '#F0F0F0' }}>
         {value}
       </p>
@@ -73,6 +87,10 @@ function StatCard({ label, value, accent }: { label: string; value: string | num
       </p>
     </div>
   )
+  if (href) {
+    return <Link href={href} className="block hover:opacity-80">{content}</Link>
+  }
+  return content
 }
 
 function formatCurrency(amount: number | null) {
@@ -98,12 +116,14 @@ export default async function MorningBriefPage() {
       </div>
 
       {/* Section A — Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Tasks Remaining" value={stats.tasksRemaining} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Tasks Remaining" value={stats.tasksRemaining} href="/projects" />
         <StatCard label="Critical Tasks" value={stats.criticalTasks} />
-        <StatCard label="Follow-Ups Due" value={stats.followUpsDue} />
+        <StatCard label="Follow-Ups Due" value={stats.followUpsDue} href="/crm?filter=due" />
         <StatCard label="Total Prospects" value={stats.totalProspects} />
         <StatCard label="Funding Apps" value={stats.fundingApps} />
+        <StatCard label="Revenue This Month" value={`$${stats.revenueThisMonth.toLocaleString()}`} />
+        <StatCard label="Live Events" value={stats.liveEvents} />
         <StatCard label="Launch Target" value="March 2027" accent />
       </div>
 

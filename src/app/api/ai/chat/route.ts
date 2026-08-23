@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '@/lib/supabase'
-import { ZUVA_SYSTEM_PROMPT } from '@/lib/systemPrompt'
+import { ZUVA_SYSTEM_PROMPT } from '@/lib/zuva-system-prompt'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
