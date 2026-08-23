@@ -1,69 +1,153 @@
-import Image from "next/image";
+import { supabaseAdmin } from '@/lib/supabase'
+import { colorFor, FUNDING_STATUS_COLORS } from '@/lib/badgeColors'
+import ColorBadge from '@/components/ColorBadge'
+import PriorityQueue from '@/components/PriorityQueue'
+import DailyBriefing from '@/components/DailyBriefing'
+import type { CommandTask, CommandFunding } from '@/lib/types'
 
-export default function Home() {
+// Every stat/table on this page reads live Supabase data at request time —
+// force-dynamic so Next never tries to prerender it at build time (which
+// would fail without real Supabase credentials configured).
+export const dynamic = 'force-dynamic'
+
+const PRIORITY_RANK: Record<string, number> = { Critical: 1, High: 2, Medium: 3, Low: 4 }
+
+async function getStats() {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const [tasksRemaining, criticalTasks, followUpsDue, totalProspects, fundingApps] = await Promise.all([
+    supabaseAdmin.from('command_tasks').select('*', { count: 'exact', head: true }).neq('status', 'Completed'),
+    supabaseAdmin
+      .from('command_tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('priority', 'Critical')
+      .neq('status', 'Completed'),
+    supabaseAdmin.from('command_prospects').select('*', { count: 'exact', head: true }).lte('follow_up_due', today),
+    supabaseAdmin.from('command_prospects').select('*', { count: 'exact', head: true }),
+    supabaseAdmin
+      .from('command_funding')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['Submitted', 'Under Review']),
+  ])
+
+  return {
+    tasksRemaining: tasksRemaining.count ?? 0,
+    criticalTasks: criticalTasks.count ?? 0,
+    followUpsDue: followUpsDue.count ?? 0,
+    totalProspects: totalProspects.count ?? 0,
+    fundingApps: fundingApps.count ?? 0,
+  }
+}
+
+async function getPriorityQueue(): Promise<CommandTask[]> {
+  const { data, error } = await supabaseAdmin
+    .from('command_tasks')
+    .select('*')
+    .in('status', ['Not Started', 'In Progress'])
+
+  if (error || !data) return []
+
+  return [...data]
+    .sort((a, b) => (PRIORITY_RANK[a.priority] ?? 5) - (PRIORITY_RANK[b.priority] ?? 5))
+    .slice(0, 8)
+}
+
+async function getFunding(): Promise<CommandFunding[]> {
+  const { data, error } = await supabaseAdmin
+    .from('command_funding')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return []
+  return data
+}
+
+function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="rounded-xl p-5" style={{ backgroundColor: '#1A1A1A', border: '1px solid #2A2A2A' }}>
+      <p className="text-3xl font-extrabold" style={{ color: accent ? '#F37B0D' : '#F0F0F0' }}>
+        {value}
+      </p>
+      <p className="mt-1 text-sm" style={{ color: '#888888' }}>
+        {label}
+      </p>
     </div>
-  );
+  )
+}
+
+function formatCurrency(amount: number | null) {
+  if (amount === null) return '—'
+  return `$${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}`
+}
+
+function formatDate(date: string | null) {
+  if (!date) return '—'
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+export default async function MorningBriefPage() {
+  const [stats, priorityTasks, funding] = await Promise.all([getStats(), getPriorityQueue(), getFunding()])
+
+  return (
+    <div className="space-y-8 p-8">
+      <div>
+        <h1 className="text-2xl font-bold text-white">Morning Brief</h1>
+        <p className="text-sm" style={{ color: '#888888' }}>
+          Your operational snapshot for today.
+        </p>
+      </div>
+
+      {/* Section A — Stat cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="Tasks Remaining" value={stats.tasksRemaining} />
+        <StatCard label="Critical Tasks" value={stats.criticalTasks} />
+        <StatCard label="Follow-Ups Due" value={stats.followUpsDue} />
+        <StatCard label="Total Prospects" value={stats.totalProspects} />
+        <StatCard label="Funding Apps" value={stats.fundingApps} />
+        <StatCard label="Launch Target" value="March 2027" accent />
+      </div>
+
+      {/* Section B — Priority queue */}
+      <div>
+        <h2 className="mb-3 text-lg font-bold text-white">Priority Queue</h2>
+        <PriorityQueue initialTasks={priorityTasks} />
+      </div>
+
+      {/* Section C — AI daily briefing */}
+      <DailyBriefing />
+
+      {/* Section D — Funding pipeline */}
+      <div>
+        <h2 className="mb-3 text-lg font-bold text-white">Funding Pipeline</h2>
+        <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A2A2A' }}>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr style={{ backgroundColor: '#111111', color: '#888888' }}>
+                <th className="px-4 py-3 font-medium">Program</th>
+                <th className="px-4 py-3 font-medium">Organization</th>
+                <th className="px-4 py-3 font-medium">Amount Requested</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Next Action</th>
+                <th className="px-4 py-3 font-medium">Next Action Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {funding.map((row) => (
+                <tr key={row.id} style={{ backgroundColor: '#1A1A1A', borderTop: '1px solid #2A2A2A' }}>
+                  <td className="px-4 py-3 font-medium text-white">{row.program_name}</td>
+                  <td className="px-4 py-3" style={{ color: '#F0F0F0' }}>{row.organization}</td>
+                  <td className="px-4 py-3" style={{ color: '#F0F0F0' }}>{formatCurrency(row.amount_requested)}</td>
+                  <td className="px-4 py-3">
+                    <ColorBadge label={row.status} color={colorFor(FUNDING_STATUS_COLORS, row.status)} />
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#888888' }}>{row.next_action ?? '—'}</td>
+                  <td className="px-4 py-3" style={{ color: '#888888' }}>{formatDate(row.next_action_date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
 }
