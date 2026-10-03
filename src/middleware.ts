@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const SESSION_COOKIE = 'zuva_command_session'
-const VALID_SESSION_VALUE = 'zuva_command_session_valid'
+import { SESSION_COOKIE, verifySessionToken } from '@/lib/session'
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout']
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (PUBLIC_PATHS.some((path) => pathname === path)) {
@@ -13,7 +11,7 @@ export function middleware(request: NextRequest) {
   }
 
   const session = request.cookies.get(SESSION_COOKIE)?.value
-  if (session !== VALID_SESSION_VALUE) {
+  if (!(await verifySessionToken(session))) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

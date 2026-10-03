@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-
-const SESSION_COOKIE = 'zuva_command_session'
+import { SESSION_COOKIE } from '@/lib/session'
 
 export async function POST() {
   const response = NextResponse.json({ success: true })

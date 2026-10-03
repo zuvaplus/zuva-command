@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const SESSION_COOKIE = 'zuva_command_session'
-const VALID_SESSION_VALUE = 'zuva_command_session_valid'
-const THIRTY_DAYS_SECONDS = 60 * 60 * 24 * 30
+import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, constantTimeEqual, createSessionToken } from '@/lib/session'
 
 export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json()
+    const expected = process.env.COMMAND_PASSWORD
 
-    if (password !== process.env.COMMAND_PASSWORD) {
+    // Without the env-var guard, an unset COMMAND_PASSWORD plus a request
+    // with no password field would compare undefined === undefined and log in.
+    if (!expected || typeof password !== 'string' || !constantTimeEqual(password, expected)) {
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
     }
 
     const response = NextResponse.json({ success: true })
-    response.cookies.set(SESSION_COOKIE, VALID_SESSION_VALUE, {
+    response.cookies.set(SESSION_COOKIE, await createSessionToken(), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: THIRTY_DAYS_SECONDS,
+      maxAge: SESSION_MAX_AGE_SECONDS,
       path: '/',
     })
     return response
