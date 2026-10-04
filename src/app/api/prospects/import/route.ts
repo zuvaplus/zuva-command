@@ -103,8 +103,19 @@ export async function POST(request: NextRequest) {
       if (error) throw error
     }
 
+    const details: string[] = []
+    if (duplicateExisting + duplicateInFile > 0) {
+      details.push(`Duplicates: ${duplicateExisting} already in the CRM (same company and market), ${duplicateInFile} repeated in this file.`)
+    }
+    if (missingCompany > 0) details.push(`Other: ${missingCompany} rows had no company name.`)
+    if (needsEmail > 0) details.push(`${needsEmail} imported without an email (tagged "needs email").`)
+    if (unrecognizedMarkets.size > 0) {
+      details.push(`Unrecognised markets set to Other (original kept in notes): ${[...unrecognizedMarkets].join(', ')}`)
+    }
+
     return NextResponse.json({
       imported: rowsToInsert.length,
+      details,
       duplicates: duplicateExisting + duplicateInFile,
       duplicate_existing: duplicateExisting,
       duplicate_in_file: duplicateInFile,

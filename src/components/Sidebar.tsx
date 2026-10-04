@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   MessageSquare,
   Users,
+  UserPlus,
   TrendingUp,
   CheckSquare,
   Trophy,
@@ -24,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Morning Brief', icon: 'sun' },
   { href: '/assistant', label: 'AI Assistant', icon: MessageSquare },
   { href: '/crm', label: 'Advertiser CRM', icon: Users },
+  { href: '/creators', label: 'Creators', icon: UserPlus },
   { href: '/revenue', label: 'Revenue', icon: TrendingUp },
   { href: '/projects', label: 'Project Command', icon: CheckSquare },
   { href: '/sports', label: 'Zuva Sports', icon: Trophy },
@@ -43,6 +45,7 @@ function formatDateTime(date: Date) {
 
 interface SidebarStatus {
   overdueFollowUps: number
+  creatorFollowUpsDue: number
   liveSportsEvent: boolean
   gmailConnected: boolean
 }
@@ -51,7 +54,7 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [now, setNow] = useState<Date | null>(null)
-  const [status, setStatus] = useState<SidebarStatus>({ overdueFollowUps: 0, liveSportsEvent: false, gmailConnected: false })
+  const [status, setStatus] = useState<SidebarStatus>({ overdueFollowUps: 0, creatorFollowUpsDue: 0, liveSportsEvent: false, gmailConnected: false })
 
   useEffect(() => {
     setNow(new Date())
@@ -95,7 +98,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href
+          const active = item.href === '/' ? pathname === '/' : pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
             <Link
               key={item.href}
@@ -128,6 +131,15 @@ export default function Sidebar() {
                   style={active ? { backgroundColor: '#000000', color: '#F37B0D' } : { backgroundColor: '#EF4444', color: '#FFFFFF' }}
                 >
                   {status.overdueFollowUps}
+                </span>
+              )}
+              {item.href === '/creators' && status.creatorFollowUpsDue > 0 && (
+                <span
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+                  style={active ? { backgroundColor: '#000000', color: '#F37B0D' } : { backgroundColor: '#EF4444', color: '#FFFFFF' }}
+                  title="Creator follow-ups due"
+                >
+                  {status.creatorFollowUpsDue}
                 </span>
               )}
             </Link>

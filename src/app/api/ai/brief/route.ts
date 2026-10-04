@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '@/lib/supabase'
 import { ZUVA_SYSTEM_PROMPT } from '@/lib/zuva-system-prompt'
+import { getCreatorSummary } from '@/lib/creatorData'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -50,6 +51,12 @@ export async function POST() {
 
     const revenueThisMonth = (revenueRes.data ?? []).reduce((sum, r) => sum + Number(r.revenue_usd || 0), 0)
 
+    // Optional: the brief still works if the creators tables don't exist yet.
+    const creators = await getCreatorSummary().catch((error) => {
+      console.error('AI brief creator data error:', error)
+      return null
+    })
+
     const briefingData = {
       today,
       critical_or_overdue_tasks: tasksRes.data,
@@ -59,6 +66,14 @@ export async function POST() {
       live_sports_events: liveEventsRes.data,
       active_campaigns_count: activeCampaignsRes.count ?? 0,
       revenue_this_month_usd: revenueThisMonth,
+      creator_follow_ups_due: creators?.followUpsDue ?? 'unavailable',
+      founding_cohort: creators
+        ? {
+            summary: `${creators.cohort.signed} of ${creators.cohort.target} signed`,
+            signed_by_tier: creators.cohort.byTier,
+            targets: creators.cohort.targets,
+          }
+        : 'unavailable',
     }
 
     const response = await client.messages.create({

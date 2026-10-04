@@ -5,6 +5,8 @@ import ColorBadge from '@/components/ColorBadge'
 import PriorityQueue from '@/components/PriorityQueue'
 import DailyBriefing from '@/components/DailyBriefing'
 import type { CommandTask, CommandFunding } from '@/lib/types'
+import { getCreatorSummary } from '@/lib/creatorData'
+import { FOUNDING_COHORT_TOTAL } from '@/lib/creators'
 
 // Every stat/table on this page reads live Supabase data at request time —
 // force-dynamic so Next never tries to prerender it at build time (which
@@ -42,7 +44,21 @@ async function getStats() {
 
   const revenueThisMonth = (revenueRows.data ?? []).reduce((sum, r) => sum + Number(r.revenue_usd || 0), 0)
 
+  // Creators stats fail soft (e.g. before the creators migration is run)
+  // so the rest of the Morning Brief still loads.
+  let creatorFollowUpsDue: number | null = null
+  let cohortSigned: number | null = null
+  try {
+    const creators = await getCreatorSummary()
+    creatorFollowUpsDue = creators.followUpsDue.length
+    cohortSigned = creators.cohort.signed
+  } catch (error) {
+    console.error('Morning Brief creator stats error:', error)
+  }
+
   return {
+    creatorFollowUpsDue,
+    cohortSigned,
     tasksRemaining: tasksRemaining.count ?? 0,
     criticalTasks: criticalTasks.count ?? 0,
     followUpsDue: followUpsDue.count ?? 0,
@@ -124,6 +140,12 @@ export default async function MorningBriefPage() {
         <StatCard label="Funding Apps" value={stats.fundingApps} />
         <StatCard label="Revenue This Month" value={`$${stats.revenueThisMonth.toLocaleString()}`} />
         <StatCard label="Live Events" value={stats.liveEvents} />
+        <StatCard label="Creator follow-ups due" value={stats.creatorFollowUpsDue ?? '—'} href="/creators?filter=due" />
+        <StatCard
+          label={`Founding cohort: ${stats.cohortSigned ?? '—'} of ${FOUNDING_COHORT_TOTAL} signed`}
+          value={stats.cohortSigned === null ? '—' : `${stats.cohortSigned}/${FOUNDING_COHORT_TOTAL}`}
+          href="/creators"
+        />
         <StatCard label="Launch Target" value="March 2027" accent />
       </div>
 

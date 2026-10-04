@@ -117,3 +117,38 @@ export interface HubSchoolStatus {
 }
 
 export type HubSchoolsConfig = Record<string, HubSchoolStatus>
+
+export interface CommandCreator {
+  id: string
+  display_name: string
+  primary_platform: string
+  profile_url: string | null
+  followers: number | null
+  avg_views: number | null
+  country: string | null
+  content_category: string | null
+  primary_language: string | null
+  audience_diaspora_pct: number | null
+  pain_signal: boolean
+  stage: string
+  source: string | null
+  proposed_tier: string
+  recruit_score: number
+  recruit_score_manual: boolean
+  notes: string | null
+  last_contact: string | null
+  follow_up_due: string | null
+  contact_method: string | null
+  contact_detail: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CommandCreatorActivity {
+  id: string
+  creator_id: string
+  activity_type: string
+  description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
