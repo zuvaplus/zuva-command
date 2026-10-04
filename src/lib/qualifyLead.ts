@@ -9,15 +9,19 @@ const HIGH_VALUE_INDUSTRIES = [
   'Tech & Apps',
 ]
 
+// Must use the exact labels from src/lib/markets.ts.
 const HIGH_VALUE_MARKETS = [
   'Nigeria',
   'Ghana',
   'South Africa',
   'Kenya',
-  'African Diaspora (UK)',
-  'African Diaspora (USA)',
-  'African Diaspora (Canada)',
-  'Caribbean Diaspora (UK)',
+  'Zimbabwe',
+  'Jamaica',
+  'Trinidad and Tobago',
+  'UK (Diaspora)',
+  'North America (Diaspora)',
+  'Europe (Diaspora)',
+  'Australia (Diaspora)',
 ]
 
 export function qualifyLead(industry: string, market: string, size: string): number {

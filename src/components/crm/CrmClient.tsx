@@ -8,7 +8,9 @@ import PipelineKanban from './PipelineKanban'
 import ProspectDetail from './ProspectDetail'
 import AddProspectModal from './AddProspectModal'
 import ImportCsvModal from './ImportCsvModal'
-import { STAGE_OPTIONS, INDUSTRY_OPTIONS, MARKET_OPTIONS } from '@/lib/crmOptions'
+import MarketOptions from './MarketOptions'
+import NeedsEmailBadge from './NeedsEmailBadge'
+import { STAGE_OPTIONS, INDUSTRY_OPTIONS } from '@/lib/crmOptions'
 import type { CommandProspect } from '@/lib/types'
 
 const selectClass = 'rounded-md px-3 py-2 text-sm bg-[#111111] border border-[#2A2A2A] text-[#F0F0F0]'
@@ -82,7 +84,7 @@ export default function CrmClient({
       if (marketFilter !== 'All' && p.market !== marketFilter) return false
       if (search.trim()) {
         const q = search.toLowerCase()
-        const haystack = `${p.company} ${p.contact ?? ''} ${p.email}`.toLowerCase()
+        const haystack = `${p.company} ${p.contact ?? ''} ${p.email ?? ''}`.toLowerCase()
         if (!haystack.includes(q)) return false
       }
       return true
@@ -112,8 +114,15 @@ export default function CrmClient({
   // against the Anthropic API from a single click risks rate limits with
   // no benefit here (nobody is watching a progress bar race).
   async function bulkGenerate() {
-    const targets = prospects.filter((p) => selectedForCampaign.has(p.id))
-    if (targets.length === 0) return
+    const selected = prospects.filter((p) => selectedForCampaign.has(p.id))
+    // Prospects with no email can't be sent anything, so don't spend an AI
+    // generation on them — report how many were left out instead.
+    const targets = selected.filter((p) => p.email)
+    const skippedNoEmail = selected.length - targets.length
+    if (targets.length === 0) {
+      if (skippedNoEmail > 0) setBulkResult(`No emails generated — all ${skippedNoEmail} selected prospects need an email address first.`)
+      return
+    }
     setBulkGenerating(true)
     setBulkResult(null)
     setBulkProgress({ done: 0, total: targets.length })
@@ -133,7 +142,8 @@ export default function CrmClient({
     }
     setBulkGenerating(false)
     setBulkProgress(null)
-    setBulkResult(`${succeeded}/${targets.length} cold emails generated — open each prospect's AI Email Composer tab to review and send.`)
+    const skippedNote = skippedNoEmail > 0 ? ` Skipped ${skippedNoEmail} with no email address.` : ''
+    setBulkResult(`${succeeded}/${targets.length} cold emails generated — open each prospect's AI Email Composer tab to review and send.${skippedNote}`)
     setSelectedForCampaign(new Set())
   }
 
@@ -200,7 +210,7 @@ export default function CrmClient({
           </select>
           <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)} className={selectClass}>
             <option value="All">All Markets</option>
-            {MARKET_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            <MarketOptions />
           </select>
           {dueOnly && (
             <button
@@ -265,7 +275,11 @@ export default function CrmClient({
                         onChange={() => toggleCampaignSelection(p.id)}
                       />
                       <span className="text-sm text-white">{p.company}</span>
-                      <span className="text-xs" style={{ color: '#888888' }}>{p.email}</span>
+                      {p.email ? (
+                        <span className="text-xs" style={{ color: '#888888' }}>{p.email}</span>
+                      ) : (
+                        <NeedsEmailBadge />
+                      )}
                     </label>
                   ))}
                 </div>

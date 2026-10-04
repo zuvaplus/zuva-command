@@ -32,7 +32,7 @@ export interface CommandProspect {
   id: string
   company: string
   contact: string | null
-  email: string
+  email: string | null
   industry: string | null
   market: string | null
   size: string

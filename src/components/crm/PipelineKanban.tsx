@@ -2,6 +2,7 @@
 
 import { colorFor, STAGE_COLORS, scoreInfo } from '@/lib/badgeColors'
 import { STAGE_OPTIONS } from '@/lib/crmOptions'
+import NeedsEmailBadge from './NeedsEmailBadge'
 import type { CommandProspect } from '@/lib/types'
 
 export default function PipelineKanban({
@@ -36,6 +37,7 @@ export default function PipelineKanban({
                     <p className="truncate text-xs font-semibold text-white">{p.company}</p>
                     <p className="truncate text-[11px]" style={{ color: '#888888' }}>{p.market ?? '—'}</p>
                     <p className="text-[11px] font-bold" style={{ color: score.color }}>{p.score}/5</p>
+                    {!p.email && <div className="mt-1"><NeedsEmailBadge /></div>}
                     <select
                       value={p.stage}
                       onChange={(e) => { e.stopPropagation(); onStageChange(p.id, e.target.value) }}

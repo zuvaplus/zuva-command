@@ -21,7 +21,7 @@ Sender: Dexter Musarurwa, Founder & CEO, Zuva Media (zuva.tv)`
 interface ProspectInput {
   company: string
   contact?: string | null
-  email: string
+  email: string | null
   industry?: string | null
   market?: string | null
   size?: string | null
@@ -55,9 +55,10 @@ export async function POST(request: NextRequest) {
     const userMessage = `Write a ${email_type} email for this advertiser prospect:
 Company: ${prospect.company}
 Contact: ${prospect.contact ?? 'Unknown'}
-Email: ${prospect.email}
+Email: ${prospect.email ?? 'Unknown'}
 Industry: ${prospect.industry ?? 'Unknown'}
 Market (who they serve): ${prospect.market ?? 'Unknown'}
+(Market labels: "<Region> (Diaspora)" = African & Caribbean diaspora audiences living in that region; "Pan-African" / "Pan-Caribbean" = multi-country across that region; a country name = audiences in that country.)
 Company size: ${prospect.size ?? 'Unknown'}
 Website: ${prospect.website ?? 'Unknown'}
 Notes: ${prospect.notes ?? 'None'}

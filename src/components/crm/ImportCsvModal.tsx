@@ -12,7 +12,13 @@ export default function ImportCsvModal() {
   const [csvText, setCsvText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [result, setResult] = useState<{
+    imported: number
+    skipped: number
+    duplicates: number
+    needs_email: number
+    unrecognized_markets: string[]
+  } | null>(null)
 
   function close() {
     setOpen(false)
@@ -69,7 +75,7 @@ export default function ImportCsvModal() {
         </div>
 
         <p className="mb-2 text-xs" style={{ color: '#888888' }}>
-          Expected format (header row optional):
+          Expected format (header row optional; email can be blank):
         </p>
         <code className="mb-3 block rounded-md px-3 py-2 text-xs" style={{ backgroundColor: '#111111', color: '#F37B0D', border: '1px solid #2A2A2A' }}>
           company,contact,email,industry,market,size
@@ -85,9 +91,19 @@ export default function ImportCsvModal() {
 
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
         {result && (
-          <p className="mt-2 text-sm" style={{ color: '#F37B0D' }}>
-            {result.imported} imported, {result.skipped} skipped (missing company or email)
-          </p>
+          <div className="mt-2 space-y-1 text-sm" style={{ color: '#F37B0D' }}>
+            <p>
+              {result.imported} imported
+              {result.needs_email > 0 && ` (${result.needs_email} tagged "needs email")`}
+              {result.skipped > 0 && `, ${result.skipped} skipped (missing company)`}
+              {result.duplicates > 0 && `, ${result.duplicates} duplicate companies skipped`}
+            </p>
+            {result.unrecognized_markets.length > 0 && (
+              <p className="text-xs" style={{ color: '#888888' }}>
+                Unrecognised markets set to Other (original kept in notes): {result.unrecognized_markets.join(', ')}
+              </p>
+            )}
+          </div>
         )}
 
         <Button

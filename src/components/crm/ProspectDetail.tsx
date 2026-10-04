@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
 import DetailsTab from './DetailsTab'
 import EmailComposer from './EmailComposer'
+import NeedsEmailBadge from './NeedsEmailBadge'
 import type { CommandProspect, CommandProspectActivity, CommandEmail } from '@/lib/types'
 
 type Tab = 'details' | 'compose'
@@ -25,6 +26,8 @@ export default function ProspectDetail({
   const [, setEmails] = useState<CommandEmail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [newEmail, setNewEmail] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -61,6 +64,18 @@ export default function ProspectDetail({
     }
   }
 
+  async function saveEmail() {
+    const email = newEmail.trim()
+    if (!email) return
+    setSavingEmail(true)
+    try {
+      await handleUpdate({ email })
+      setNewEmail('')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -76,8 +91,34 @@ export default function ProspectDetail({
   return (
     <div className="flex h-full flex-col">
       <div className="border-b px-6 pt-5" style={{ borderColor: '#2A2A2A' }}>
-        <h2 className="text-lg font-bold text-white">{prospect.company}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-white">{prospect.company}</h2>
+          {!prospect.email && <NeedsEmailBadge />}
+        </div>
         <p className="mb-4 text-sm" style={{ color: '#888888' }}>{prospect.contact ?? prospect.email}</p>
+        {!prospect.email && (
+          <form
+            onSubmit={(e) => { e.preventDefault(); saveEmail() }}
+            className="mb-4 flex gap-2"
+          >
+            <input
+              type="email"
+              required
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="Add an email address…"
+              className="flex-1 rounded-md px-3 py-1.5 text-sm bg-[#111111] border border-[#2A2A2A] text-[#F0F0F0] placeholder:text-[#888888]"
+            />
+            <button
+              type="submit"
+              disabled={savingEmail || !newEmail.trim()}
+              className="rounded-md px-3 py-1.5 text-sm font-bold text-black disabled:opacity-40"
+              style={{ backgroundColor: '#F37B0D' }}
+            >
+              {savingEmail ? 'Saving…' : 'Save'}
+            </button>
+          </form>
+        )}
         <div className="flex gap-1">
           {(['details', 'compose'] as Tab[]).map((t) => (
             <button

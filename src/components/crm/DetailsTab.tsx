@@ -5,7 +5,8 @@ import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { INDUSTRY_OPTIONS, MARKET_OPTIONS, SIZE_OPTIONS, STAGE_OPTIONS } from '@/lib/crmOptions'
+import MarketOptions from './MarketOptions'
+import { INDUSTRY_OPTIONS, SIZE_OPTIONS, STAGE_OPTIONS } from '@/lib/crmOptions'
 import { scoreInfo } from '@/lib/badgeColors'
 import type { CommandProspect, CommandProspectActivity } from '@/lib/types'
 
@@ -83,9 +84,10 @@ export default function DetailsTab({
           <label className={fieldLabelClass} style={{ color: '#888888' }}>Email</label>
           <Input
             type="email"
-            value={local.email}
+            value={local.email ?? ''}
+            placeholder="No email yet"
             onChange={(e) => updateLocal('email', e.target.value)}
-            onBlur={() => commit({ email: local.email })}
+            onBlur={() => commit({ email: local.email?.trim() || null })}
             className="border-[#2A2A2A] bg-[#111111] text-white"
           />
         </div>
@@ -108,7 +110,7 @@ export default function DetailsTab({
             className={selectClass}
           >
             <option value="">—</option>
-            {MARKET_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            <MarketOptions current={local.market} />
           </select>
         </div>
         <div>

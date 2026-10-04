@@ -2,6 +2,7 @@
 
 import { colorFor, STAGE_COLORS, scoreInfo } from '@/lib/badgeColors'
 import ColorBadge from '@/components/ColorBadge'
+import NeedsEmailBadge from './NeedsEmailBadge'
 import type { CommandProspect } from '@/lib/types'
 
 function isOverdue(dueDate: string | null): boolean {
@@ -52,8 +53,9 @@ export default function ProspectList({
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{p.company}</p>
-              <p className="truncate text-xs" style={{ color: '#888888' }}>{p.contact || p.email}</p>
+              <p className="truncate text-xs" style={{ color: '#888888' }}>{p.contact || p.email || '—'}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {!p.email && <NeedsEmailBadge />}
                 {p.industry && <ColorBadge label={p.industry} color="#3B82F6" />}
                 {p.market && <span className="text-xs" style={{ color: '#888888' }}>{p.market}</span>}
               </div>

@@ -10,7 +10,7 @@ import { EMAIL_TYPE_OPTIONS } from '@/lib/crmOptions'
 export interface ComposerProspectData {
   company: string
   contact?: string | null
-  email: string
+  email: string | null
   industry?: string | null
   market?: string | null
   size?: string | null
@@ -80,7 +80,7 @@ export default function EmailComposer({
   }
 
   async function send() {
-    if (!draft) return
+    if (!draft || !prospectData.email) return
     setSending(true)
     setError(null)
     try {
@@ -167,10 +167,20 @@ export default function EmailComposer({
           />
 
           {gmailConnected ? (
-            <Button onClick={send} disabled={sending} className="gap-2 font-bold text-black hover:opacity-90" style={{ backgroundColor: '#F37B0D' }}>
-              {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              {sending ? 'Sending…' : sent ? 'Sent ✓' : 'Send via Gmail'}
-            </Button>
+            <div className="space-y-1.5">
+              <Button
+                onClick={send}
+                disabled={sending || !prospectData.email}
+                className="gap-2 font-bold text-black hover:opacity-90"
+                style={{ backgroundColor: '#F37B0D' }}
+              >
+                {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {sending ? 'Sending…' : sent ? 'Sent ✓' : 'Send via Gmail'}
+              </Button>
+              {!prospectData.email && (
+                <p className="text-xs" style={{ color: '#EAB308' }}>Add an email address for this prospect to send.</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-2 rounded-md p-3" style={{ backgroundColor: '#111111', border: '1px solid #2A2A2A' }}>
               <p className="text-xs" style={{ color: '#888888' }}>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { qualifyLead } from '@/lib/qualifyLead'
+import { NEEDS_EMAIL_TAG } from '@/lib/prospectTags'
 
 export async function GET() {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { company, contact, email, industry, market, size, website, notes } = body as {
       company: string
       contact?: string | null
-      email: string
+      email?: string | null
       industry?: string | null
       market?: string | null
       size?: string
@@ -52,9 +53,10 @@ export async function POST(request: NextRequest) {
       notes?: string | null
     }
 
-    if (!company || !email) {
-      return NextResponse.json({ error: 'company and email are required' }, { status: 400 })
+    if (!company) {
+      return NextResponse.json({ error: 'company is required' }, { status: 400 })
     }
+    const cleanEmail = email?.trim() || null
 
     const score = qualifyLead(industry ?? '', market ?? '', size ?? 'SME')
 
@@ -63,7 +65,8 @@ export async function POST(request: NextRequest) {
       .insert({
         company,
         contact: contact || null,
-        email,
+        email: cleanEmail,
+        tags: cleanEmail ? null : [NEEDS_EMAIL_TAG],
         industry: industry || null,
         market: market || null,
         size: size || 'SME',

@@ -20,21 +20,7 @@ export const INDUSTRY_OPTIONS = [
   'Other',
 ]
 
-export const MARKET_OPTIONS = [
-  'Nigeria',
-  'Ghana',
-  'South Africa',
-  'Kenya',
-  'African Diaspora (UK)',
-  'African Diaspora (USA)',
-  'African Diaspora (Canada)',
-  'Caribbean Diaspora (UK)',
-  'Jamaica',
-  'Trinidad & Tobago',
-  'Zimbabwe',
-  'Global',
-  'Other',
-]
+// Markets live in src/lib/markets.ts (grouped list + legacy-label mapping).
 
 export const SIZE_OPTIONS = ['SME', 'Mid-Market', 'Enterprise']
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { NEEDS_EMAIL_TAG } from '@/lib/prospectTags'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -46,7 +47,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (field in updates) patch[field] = updates[field]
     }
 
-    const { data: before } = await supabaseAdmin.from('command_prospects').select('stage, score').eq('id', id).single()
+    const { data: before } = await supabaseAdmin.from('command_prospects').select('stage, score, tags').eq('id', id).single()
+
+    // Blank email is stored as NULL, and the needs-email tag follows it
+    // (unless the caller is setting tags explicitly).
+    if ('email' in patch) {
+      const email = typeof patch.email === 'string' ? patch.email.trim() : ''
+      patch.email = email || null
+      if (before && !('tags' in updates)) {
+        const others = ((before.tags as string[] | null) ?? []).filter((t) => t !== NEEDS_EMAIL_TAG)
+        const tags = email ? others : [...others, NEEDS_EMAIL_TAG]
+        patch.tags = tags.length > 0 ? tags : null
+      }
+    }
 
     const { data, error } = await supabaseAdmin
       .from('command_prospects')

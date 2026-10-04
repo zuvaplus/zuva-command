@@ -5,7 +5,9 @@ import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { INDUSTRY_OPTIONS, MARKET_OPTIONS, SIZE_OPTIONS } from '@/lib/crmOptions'
+import MarketOptions from './MarketOptions'
+import { INDUSTRY_OPTIONS, SIZE_OPTIONS } from '@/lib/crmOptions'
+import { MARKET_OPTIONS } from '@/lib/markets'
 import { qualifyLead } from '@/lib/qualifyLead'
 import { scoreInfo } from '@/lib/badgeColors'
 import type { CommandProspect } from '@/lib/types'
@@ -56,6 +58,7 @@ export default function AddProspectModal({ onCreated }: { onCreated: (prospect: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          email: form.email.trim() || null,
           contact: form.contact || null,
           website: form.website || null,
           notes: form.notes || null,
@@ -110,9 +113,8 @@ export default function AddProspectModal({ onCreated }: { onCreated: (prospect: 
             className="border-[#2A2A2A] bg-[#111111] text-white placeholder:text-[#888888]"
           />
           <Input
-            required
             type="email"
-            placeholder="Email *"
+            placeholder="Email (optional — can be added later)"
             value={form.email}
             onChange={(e) => update('email', e.target.value)}
             className="border-[#2A2A2A] bg-[#111111] text-white placeholder:text-[#888888]"
@@ -123,9 +125,7 @@ export default function AddProspectModal({ onCreated }: { onCreated: (prospect: 
             ))}
           </select>
           <select value={form.market} onChange={(e) => update('market', e.target.value)} className={selectClass}>
-            {MARKET_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
-            ))}
+            <MarketOptions />
           </select>
           <select value={form.size} onChange={(e) => update('size', e.target.value)} className={selectClass}>
             {SIZE_OPTIONS.map((o) => (
