@@ -1,80 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Papa from 'papaparse'
 import { supabaseAdmin } from '@/lib/supabase'
 import { qualifyLead } from '@/lib/qualifyLead'
 import { normalizeMarket, OTHER_MARKET } from '@/lib/markets'
 import { NEEDS_EMAIL_TAG } from '@/lib/prospectTags'
+import { parseProspectCsv, prospectDedupeKey } from '@/lib/prospectCsv'
 
-// Column order used when the CSV has no header row.
-const POSITIONAL_COLUMNS = ['company', 'contact', 'email', 'industry', 'market', 'size']
+const PAGE_SIZE = 1000 // Supabase caps a single select at 1000 rows
+
+// company+market keys for every prospect already in the CRM.
+async function existingProspectKeys(): Promise<Set<string>> {
+  const keys = new Set<string>()
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabaseAdmin
+      .from('command_prospects')
+      .select('company, market')
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    for (const row of data ?? []) keys.add(prospectDedupeKey(row.company, row.market))
+    if (!data || data.length < PAGE_SIZE) return keys
+  }
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error) return String(error.message)
+  return String(error)
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { csv_text } = (await request.json()) as { csv_text: string }
     if (!csv_text || !csv_text.trim()) {
-      return NextResponse.json({ error: 'csv_text is required' }, { status: 400 })
+      return NextResponse.json({ error: 'The CSV is empty — paste some rows or choose a file.' }, { status: 400 })
     }
 
-    // papaparse handles quoted fields, embedded commas/newlines and "" escapes.
-    const parsed = Papa.parse<string[]>(csv_text.trim(), { skipEmptyLines: 'greedy' })
-    const rows = parsed.data
-    if (rows.length === 0) {
-      return NextResponse.json({ imported: 0, skipped: 0, duplicates: 0, needs_email: 0, unrecognized_markets: [] })
-    }
-
-    const firstRow = rows[0].map((h) => h.trim().toLowerCase())
-    const hasHeader = firstRow.includes('company')
-    const columns = hasHeader ? firstRow : POSITIONAL_COLUMNS
-    const dataRows = hasHeader ? rows.slice(1) : rows
+    const rows = parseProspectCsv(csv_text)
+    const existingKeys = await existingProspectKeys()
 
     const rowsToInsert: Record<string, unknown>[] = []
     const seenCompanies = new Set<string>()
     const unrecognizedMarkets = new Set<string>()
-    let skipped = 0
-    let duplicates = 0
+    let missingCompany = 0
+    let duplicateExisting = 0
+    let duplicateInFile = 0
     let needsEmail = 0
 
-    for (const cols of dataRows) {
-      const get = (name: string) => {
-        const i = columns.indexOf(name)
-        return i === -1 ? '' : (cols[i] ?? '').trim()
-      }
-
-      const company = get('company')
+    for (const row of rows) {
+      const { company } = row
       if (!company) {
-        skipped++
+        missingCompany++
         continue
       }
-
-      // Dedupe within this import only — first occurrence wins.
-      const companyKey = company.toLowerCase().replace(/\s+/g, ' ')
-      if (seenCompanies.has(companyKey)) {
-        duplicates++
-        continue
-      }
-      seenCompanies.add(companyKey)
-
-      const email = get('email') || null
-      if (!email) needsEmail++
 
       // Legacy labels ("African Diaspora (UK)", "Trinidad & Tobago", …) map
       // to the current list; anything unrecognised becomes Other, with the
       // original value kept in notes so nothing is lost.
-      const rawMarket = get('market')
-      let market = normalizeMarket(rawMarket)
+      let market = normalizeMarket(row.market)
       let notes: string | null = null
-      if (rawMarket && !market) {
-        unrecognizedMarkets.add(rawMarket)
+      if (row.market && !market) {
+        unrecognizedMarkets.add(row.market)
         market = OTHER_MARKET
-        notes = `Imported market: ${rawMarket}`
+        notes = `Imported market: ${row.market}`
       }
 
-      const industry = get('industry') || null
-      const size = get('size') || 'SME'
+      // Already in the CRM with the same market → skip. This is what makes
+      // re-running the same import harmless.
+      if (existingKeys.has(prospectDedupeKey(company, market))) {
+        duplicateExisting++
+        continue
+      }
+
+      // Within this file, first occurrence of a company wins.
+      const companyKey = company.toLowerCase().replace(/\s+/g, ' ')
+      if (seenCompanies.has(companyKey)) {
+        duplicateInFile++
+        continue
+      }
+      seenCompanies.add(companyKey)
+
+      const email = row.email || null
+      if (!email) needsEmail++
+
+      const industry = row.industry || null
+      const size = row.size || 'SME'
 
       rowsToInsert.push({
         company,
-        contact: get('contact') || null,
+        contact: row.contact || null,
         email,
         tags: email ? null : [NEEDS_EMAIL_TAG],
         industry,
@@ -92,13 +105,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       imported: rowsToInsert.length,
-      skipped,
-      duplicates,
+      duplicates: duplicateExisting + duplicateInFile,
+      duplicate_existing: duplicateExisting,
+      duplicate_in_file: duplicateInFile,
+      skipped_other: missingCompany,
       needs_email: needsEmail,
       unrecognized_markets: [...unrecognizedMarkets],
     })
   } catch (error) {
     console.error('Prospect import error:', error)
-    return NextResponse.json({ error: 'Could not import prospects' }, { status: 500 })
+    // Nothing was inserted (the insert is a single batch), so say so.
+    return NextResponse.json(
+      { error: `Import failed, nothing was imported: ${errorMessage(error)}` },
+      { status: 500 }
+    )
   }
 }

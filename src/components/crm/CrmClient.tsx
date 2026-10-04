@@ -168,7 +168,7 @@ export default function CrmClient({
                 <a href="/api/auth/gmail">Connect Gmail</a>
               )}
             </span>
-            <ImportCsvModal />
+            <ImportCsvModal onImported={refreshProspects} />
             <AddProspectModal onCreated={(p) => setProspects((prev) => [p, ...prev])} />
             <button
               onClick={() => { setCampaignMode((v) => !v); setSelectedForCampaign(new Set()) }}
