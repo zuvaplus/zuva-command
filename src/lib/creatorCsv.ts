@@ -2,7 +2,8 @@ import Papa from 'papaparse'
 
 // Shared by the creator import route (server) and the Import CSV modal's
 // preview line (client). A header row is required — there are too many
-// columns to rely on position. Common alternative header names are accepted.
+// columns to rely on position. Common alternative header names are accepted;
+// unknown columns are ignored.
 
 const HEADER_ALIASES: Record<string, string> = {
   display_name: 'display_name', name: 'display_name', creator: 'display_name', channel: 'display_name',
@@ -16,6 +17,7 @@ const HEADER_ALIASES: Record<string, string> = {
   audience_diaspora_pct: 'audience_diaspora_pct', diaspora_pct: 'audience_diaspora_pct', diaspora: 'audience_diaspora_pct',
   pain_signal: 'pain_signal', pain: 'pain_signal',
   proposed_tier: 'proposed_tier', tier: 'proposed_tier',
+  stage: 'stage', pipeline_stage: 'stage',
   source: 'source',
   contact_method: 'contact_method',
   contact_detail: 'contact_detail', contact: 'contact_detail',
@@ -25,7 +27,7 @@ const HEADER_ALIASES: Record<string, string> = {
 export const CREATOR_CSV_COLUMNS = [
   'display_name', 'primary_platform', 'profile_url', 'followers', 'avg_views', 'country',
   'content_category', 'primary_language', 'audience_diaspora_pct', 'pain_signal',
-  'proposed_tier', 'source', 'contact_method', 'contact_detail', 'notes',
+  'stage', 'proposed_tier', 'source', 'contact_method', 'contact_detail', 'notes',
 ] as const
 
 export type CreatorCsvRow = Record<(typeof CREATOR_CSV_COLUMNS)[number], string>

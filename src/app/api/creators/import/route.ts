@@ -4,6 +4,7 @@ import {
   CONTACT_METHODS,
   CONTENT_CATEGORIES,
   CREATOR_PLATFORMS,
+  CREATOR_STAGES,
   CREATOR_TIERS,
   parseCount,
   recruitScore,
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     let duplicates = 0
     let missingName = 0
     let contactRemoved = 0
-    const unrecognized: Record<string, Set<string>> = { platform: new Set(), country: new Set(), category: new Set() }
+    const unrecognized: Record<string, Set<string>> = { platform: new Set(), country: new Set(), category: new Set(), stage: new Set() }
 
     for (const row of parsed.rows) {
       if (!row.display_name) {
@@ -86,6 +87,17 @@ export async function POST(request: NextRequest) {
         category = 'other'
       }
 
+      // Stage from the file if it's a valid stage; otherwise Identified, with
+      // the original kept in notes.
+      let stage = matchOption(CREATOR_STAGES, row.stage)
+      if (!stage) {
+        if (row.stage) {
+          unrecognized.stage.add(row.stage)
+          notes.push(`Imported stage: ${row.stage}`)
+        }
+        stage = 'Identified'
+      }
+
       const pct = parseCount(row.audience_diaspora_pct.replace('%', ''))
       const contact = validateContactDetail(row.contact_detail)
       // An invalid contact detail is dropped, never copied into notes — it
@@ -108,7 +120,7 @@ export async function POST(request: NextRequest) {
         contact_method: matchOption(CONTACT_METHODS, row.contact_method),
         contact_detail: contact.ok ? contact.value : null,
         notes: notes.join('\n') || null,
-        stage: 'Identified',
+        stage,
       }
       rowsToInsert.push({ ...fields, recruit_score: recruitScore(fields), recruit_score_manual: false })
     }
@@ -134,7 +146,8 @@ export async function POST(request: NextRequest) {
     }
     for (const [label, values] of Object.entries(unrecognized)) {
       if (values.size > 0) {
-        details.push(`Unrecognised ${label} set to Other (original kept in notes): ${[...values].join(', ')}`)
+        const fallback = label === 'stage' ? 'Identified' : 'Other'
+        details.push(`Unrecognised ${label} set to ${fallback} (original kept in notes): ${[...values].join(', ')}`)
       }
     }
 
