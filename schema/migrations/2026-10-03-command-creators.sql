@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS command_creators (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- If an earlier version of this script already created the table without
+-- zuva_user_id, CREATE TABLE IF NOT EXISTS skipped it — add it here so the
+-- index below never fails. No-op when the column exists.
+ALTER TABLE command_creators
+  ADD COLUMN IF NOT EXISTS zuva_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
 -- Backstop against duplicate creators (the app also dedupes on a looser
 -- normalised URL and on display name + platform).
 CREATE UNIQUE INDEX IF NOT EXISTS command_creators_profile_url_key
