@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { ZUVA_SYSTEM_PROMPT } from '@/lib/zuva-system-prompt'
 import { DM_TYPES, DM_VARIANTS, isBoostCategory, type DmType, type DmVariant } from '@/lib/creators'
 import { buildCreatorDmPrompt, dmRuleViolations } from '@/lib/creatorDm'
+import { hasLivePayoutRoute } from '@/lib/payoutRoutes'
 import { errorMessage } from '@/lib/creatorInput'
 import type { CommandCreator } from '@/lib/types'
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { data: creator, error } = await supabaseAdmin.from('command_creators').select('*').eq('id', creator_id).single()
     if (error || !creator) return NextResponse.json({ error: 'Creator not found' }, { status: 404 })
 
-    const boost = isBoostCategory(creator.content_category)
+    const ctx = { boost: isBoostCategory(creator.content_category), payoutLive: hasLivePayoutRoute(creator.country) }
     let issues: string[] = []
     let message = ''
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
       })
       const textBlock = response.content.find((block) => block.type === 'text')
       message = (textBlock && textBlock.type === 'text' ? textBlock.text : '').trim().replace(/^["“]|["”]$/g, '')
-      issues = dmRuleViolations(message, dm_type, boost)
+      issues = dmRuleViolations(message, dm_type, ctx)
       if (issues.length === 0) break
     }
 

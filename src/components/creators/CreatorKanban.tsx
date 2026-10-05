@@ -2,7 +2,8 @@
 
 import { CREATOR_STAGES, CREATOR_STAGE_COLORS, formatCount, isBoostCategory } from '@/lib/creators'
 import type { CommandCreator } from '@/lib/types'
-import { CreatorBoostBadge, scoreColor } from './CreatorBadges'
+import { hasLivePayoutRoute } from '@/lib/payoutRoutes'
+import { CantCashOutBadge, CreatorBoostBadge, scoreColor } from './CreatorBadges'
 
 export default function CreatorKanban({
   creators,
@@ -39,6 +40,7 @@ export default function CreatorKanban({
                     <span className="text-[11px] font-bold" style={{ color: scoreColor(c.recruit_score) }}>{c.recruit_score}/6</span>
                     {isBoostCategory(c.content_category) && <CreatorBoostBadge />}
                   </div>
+                  {!hasLivePayoutRoute(c.country) && <div className="mt-1"><CantCashOutBadge country={c.country} /></div>}
                   <select
                     value={c.stage}
                     onChange={(e) => { e.stopPropagation(); onStageChange(c.id, e.target.value) }}

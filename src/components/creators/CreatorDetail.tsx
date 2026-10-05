@@ -6,7 +6,8 @@ import { categoryLabel, formatCount, isBoostCategory } from '@/lib/creators'
 import type { CommandCreator, CommandCreatorActivity } from '@/lib/types'
 import CreatorDetailsTab from './CreatorDetailsTab'
 import DmAssistant from './DmAssistant'
-import { CreatorBoostBadge, StageBadge, TierBadge } from './CreatorBadges'
+import { hasLivePayoutRoute } from '@/lib/payoutRoutes'
+import { CantCashOutBadge, CreatorBoostBadge, StageBadge, TierBadge } from './CreatorBadges'
 
 type Tab = 'details' | 'dm'
 
@@ -97,6 +98,7 @@ export default function CreatorDetail({
           <StageBadge stage={creator.stage} />
           <TierBadge tier={creator.proposed_tier} />
           {isBoostCategory(creator.content_category) && <CreatorBoostBadge />}
+          {!hasLivePayoutRoute(creator.country) && <CantCashOutBadge country={creator.country} />}
         </div>
         <p className="mb-4 flex flex-wrap items-center gap-1 text-sm" style={{ color: '#888888' }}>
           {creator.primary_platform} · {formatCount(creator.followers)} followers · {categoryLabel(creator.content_category)}

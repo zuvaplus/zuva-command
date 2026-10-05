@@ -140,6 +140,7 @@ export interface CommandCreator {
   follow_up_due: string | null
   contact_method: string | null
   contact_detail: string | null
+  zuva_user_id: string | null
   created_at: string
   updated_at: string
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { recruitScore } from '@/lib/creators'
-import { sanitizeCreatorFields, isDuplicateUrlError, errorMessage } from '@/lib/creatorInput'
+import { sanitizeCreatorFields, creatorConstraintMessage, errorMessage } from '@/lib/creatorInput'
 import { buildDuplicateIndex, fetchAllCreators, isDuplicate, logCreatorActivity } from '@/lib/creatorData'
 
 export async function GET() {
@@ -47,9 +47,8 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
     if (error) {
-      if (isDuplicateUrlError(error)) {
-        return NextResponse.json({ error: 'A creator with this profile URL already exists.' }, { status: 409 })
-      }
+      const message = creatorConstraintMessage(error)
+      if (message) return NextResponse.json({ error: message }, { status: 409 })
       throw error
     }
 

@@ -12,6 +12,7 @@ import CreatorDetail from './CreatorDetail'
 import CreatorKanban from './CreatorKanban'
 import CreatorList, { isCreatorDue } from './CreatorList'
 import ImportCreatorsModal from './ImportCreatorsModal'
+import PitchReadiness from './PitchReadiness'
 import { CategoryOptions } from './CreatorBadges'
 
 const selectClass = 'rounded-md px-3 py-2 text-sm bg-[#111111] border border-[#2A2A2A] text-[#F0F0F0]'
@@ -112,6 +113,8 @@ export default function CreatorsClient({
             <AddCreatorModal onCreated={(c) => { setCreators((prev) => [c, ...prev]); setSelectedId(c.id) }} />
           </div>
         </div>
+
+        <PitchReadiness />
 
         <CohortBar creators={creators} />
 

@@ -55,6 +55,7 @@ export default function CreatorDetailsTab({
     audience_diaspora_pct: creator.audience_diaspora_pct?.toString() ?? '',
     source: creator.source ?? '',
     contact_detail: creator.contact_detail ?? '',
+    zuva_user_id: creator.zuva_user_id ?? '',
     notes: creator.notes ?? '',
   })
   const [error, setError] = useState<string | null>(null)
@@ -185,6 +186,9 @@ export default function CreatorDetailsTab({
         </div>
         {text('contact_detail', 'Contact detail', { placeholder: 'Email or +WhatsApp number' })}
         {text('source', 'Source')}
+        <div className="col-span-2">
+          {text('zuva_user_id', 'Zuva platform user ID', { placeholder: 'Link once onboarded: their users.id UUID' })}
+        </div>
         <div>
           <label className={labelClass} style={{ color: '#888888' }}>Follow-up due</label>
           <Input type="date" value={creator.follow_up_due ?? ''} onChange={(e) => save({ follow_up_due: e.target.value || null })} className={inputClass} />

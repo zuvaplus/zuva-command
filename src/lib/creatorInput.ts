@@ -74,6 +74,14 @@ export function sanitizeCreatorFields(body: Record<string, unknown>, partial: bo
     out.contact_detail = c.value
   }
 
+  // Link to the creator's account on the Zuva platform (users.id), once onboarded.
+  if (has('zuva_user_id')) {
+    const v = typeof body.zuva_user_id === 'string' ? body.zuva_user_id.trim().toLowerCase() : ''
+    if (!v) out.zuva_user_id = null
+    else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v)) out.zuva_user_id = v
+    else return { ok: false, error: 'Zuva user ID must be a user UUID (e.g. 1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed)' }
+  }
+
   for (const f of ['last_contact', 'follow_up_due'] as const) {
     if (!has(f)) continue
     if (body[f] === null || body[f] === '') out[f] = null
@@ -84,9 +92,16 @@ export function sanitizeCreatorFields(body: Record<string, unknown>, partial: bo
   return { ok: true, fields: out }
 }
 
-// Postgres unique-violation on the profile_url index.
-export function isDuplicateUrlError(error: unknown): boolean {
-  return !!error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === '23505'
+// Friendly message for Postgres constraint errors on command_creators, or
+// null if the error is something else.
+export function creatorConstraintMessage(error: unknown): string | null {
+  if (!error || typeof error !== 'object' || !('code' in error)) return null
+  const { code } = error as { code: string }
+  const text = JSON.stringify(error)
+  if (code === '23505' && text.includes('zuva_user_id')) return 'Another creator is already linked to this Zuva user.'
+  if (code === '23505') return 'Another creator already has this profile URL.'
+  if (code === '23503' && text.includes('zuva_user_id')) return 'No Zuva platform user has that ID.'
+  return null
 }
 
 export function errorMessage(error: unknown): string {

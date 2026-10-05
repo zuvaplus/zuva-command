@@ -3,7 +3,8 @@
 import ColorBadge from '@/components/ColorBadge'
 import { categoryLabel, formatCount, isBoostCategory } from '@/lib/creators'
 import type { CommandCreator } from '@/lib/types'
-import { CreatorBoostBadge, StageBadge, TierBadge, scoreColor } from './CreatorBadges'
+import { hasLivePayoutRoute } from '@/lib/payoutRoutes'
+import { CantCashOutBadge, CreatorBoostBadge, StageBadge, TierBadge, scoreColor } from './CreatorBadges'
 
 export function isCreatorDue(c: CommandCreator, closedStages: string[]): boolean {
   if (!c.follow_up_due || closedStages.includes(c.stage)) return false
@@ -66,6 +67,7 @@ export default function CreatorList({
                 {c.content_category && <ColorBadge label={categoryLabel(c.content_category)} color="#3B82F6" />}
                 {isBoostCategory(c.content_category) && <CreatorBoostBadge />}
                 <TierBadge tier={c.proposed_tier} />
+                {!hasLivePayoutRoute(c.country) && <CantCashOutBadge country={c.country} />}
               </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">

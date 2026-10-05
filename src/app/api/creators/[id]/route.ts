@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { recruitScore } from '@/lib/creators'
-import { sanitizeCreatorFields, isDuplicateUrlError, errorMessage } from '@/lib/creatorInput'
+import { sanitizeCreatorFields, creatorConstraintMessage, errorMessage } from '@/lib/creatorInput'
 import { logCreatorActivity } from '@/lib/creatorData'
 import type { CommandCreator } from '@/lib/types'
 
@@ -67,9 +67,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .select()
       .single()
     if (error) {
-      if (isDuplicateUrlError(error)) {
-        return NextResponse.json({ error: 'Another creator already has this profile URL.' }, { status: 409 })
-      }
+      const message = creatorConstraintMessage(error)
+      if (message) return NextResponse.json({ error: message }, { status: 409 })
       throw error
     }
 

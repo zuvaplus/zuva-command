@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS command_creators (
     OR contact_detail ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'
     OR contact_detail ~ '^\+[0-9][0-9 ()-]{6,19}$'
   ),
+  -- The creator's account on the Zuva platform, linked once onboarded.
+  -- (Also added by 2026-10-04-creators-zuva-user-id.sql for databases
+  -- where this file was already run before the column existed.)
+  zuva_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -50,6 +54,8 @@ CREATE TABLE IF NOT EXISTS command_creators (
 -- normalised URL and on display name + platform).
 CREATE UNIQUE INDEX IF NOT EXISTS command_creators_profile_url_key
   ON command_creators (lower(profile_url)) WHERE profile_url IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS command_creators_zuva_user_id_key
+  ON command_creators (zuva_user_id) WHERE zuva_user_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS command_creators_stage_idx ON command_creators (stage);
 CREATE INDEX IF NOT EXISTS command_creators_follow_up_due_idx ON command_creators (follow_up_due);
 

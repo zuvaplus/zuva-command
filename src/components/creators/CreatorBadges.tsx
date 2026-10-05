@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react'
+import { Sparkles, WalletMinimal } from 'lucide-react'
 import ColorBadge from '@/components/ColorBadge'
 import { CONTENT_CATEGORIES, CREATOR_STAGE_COLORS, TIER_COLORS } from '@/lib/creators'
 
@@ -11,6 +11,20 @@ export function CreatorBoostBadge() {
     >
       <Sparkles size={11} />
       Creator Boost
+    </span>
+  )
+}
+
+// Shown when the creator's country has no live payout route (payoutRoutes.ts).
+export function CantCashOutBadge({ country }: { country: string | null }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+      style={{ backgroundColor: '#EF444422', color: '#EF4444' }}
+      title={country ? `No live payout route for ${country} yet` : 'No country set, so no confirmed payout route'}
+    >
+      <WalletMinimal size={11} />
+      Can&apos;t cash out yet
     </span>
   )
 }
